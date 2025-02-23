@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\Project;
 use App\Models\User;
+use App\Notifications\TaskAssignedNotification;
 
 
 class TaskController extends Controller
@@ -36,38 +37,43 @@ class TaskController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, $projectId)
+    public function store(Request $request, Project $project)
     {
-        // Validation des autres champs de la tâche
-    
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'due_date' => 'required|date',
+            'status' => 'required|string',
+            'assigned_to' => 'nullable|email' // Assurez-vous que c'est un email
+        ]);
+
         $task = new Task();
-        $task->title = $request->title;
-        $task->description = $request->description;
-        $task->due_date = $request->due_date;
-        $task->status = $request->status;
-        $task->project_id = $projectId;  // Associer la tâche au projet
-    
-        // Si un email est fourni, chercher l'utilisateur et lui assigner la tâche
-        if ($request->assigned_to) {
-            // Trouver l'utilisateur par email
-            $user = User::where('email', $request->assigned_to)->first();
-    
-            // Si l'utilisateur existe, assigner son ID à la tâche
+        $task->title = $validated['title'];
+        $task->description = $validated['description'];
+        $task->due_date = $validated['due_date'];
+        $task->status = $validated['status'];
+        $task->project_id = $project->id;
+
+        // Vérifie si un utilisateur avec cet email existe
+        if (!empty($validated['assigned_to'])) {
+            $user = User::where('email', $validated['assigned_to'])->first();
             if ($user) {
                 $task->assigned_to = $user->id;
-            } else {
-                // Si aucun utilisateur trouvé, tu peux gérer l'erreur ici si nécessaire
-                return redirect()->back()->with('error', 'Utilisateur non trouvé');
             }
         }
-    
-        // Sauvegarder la tâche
+
         $task->save();
-    
-        // Retourner à la page de projet avec succès
-        return redirect()->route('tasks.index', ['project' => $projectId])
-            ->with('success', 'Tâche créée avec succès.');
+
+        // Envoie la notification à l'utilisateur assigné si trouvé
+        if (isset($user)) {
+            $user->notify(new TaskAssignedNotification($task));
+        }
+
+        return redirect()->route('tasks.index', $project->id)
+                        ->with('success', 'Tâche créée avec succès');
     }
+
+
 
 
     /**
@@ -77,6 +83,8 @@ class TaskController extends Controller
     {
         $project = Project::findOrFail($projectId); // Trouver le projet
         $task = Task::findOrFail($taskId); // Trouver la tâche
+
+        $task = Task::with('assignedUser')->find($taskId);
 
         return view('tasks.show', compact('project', 'task')); // Retourner la vue avec les détails
     }
@@ -103,16 +111,30 @@ class TaskController extends Controller
      */
     public function destroy($taskId)
     {
-        // Trouver la tâche
-        $task = Task::findOrFail($taskId);
+        // Vérifier si l'ID est bien reçu
+        if (!$taskId) {
+            return redirect()->back()->with('error', 'ID de la tâche invalide.');
+        }
+
+        // Trouver la tâche en base de données
+        $task = Task::find($taskId);
+
+        // Vérifier si la tâche existe
+        if (!$task) {
+            return redirect()->back()->with('error', 'Tâche non trouvée.');
+        }
+
+        // Récupérer l'ID du projet avant suppression pour la redirection
+        $projectId = $task->project_id;
 
         // Supprimer la tâche
         $task->delete();
 
-        // Rediriger après suppression
-        return redirect()->route('projects.tasks.index', $task->project_id)
-                        ->with('success', 'La tâche a été supprimée.');
+        // Rediriger vers la liste des tâches du projet avec un message de succès
+        return redirect()->route('tasks.index', ['project' => $projectId])
+                        ->with('success', 'La tâche a été supprimée avec succès.');
     }
 
+    
 
 }

@@ -9,8 +9,8 @@
     <p><strong>Statut :</strong> {{ $task->status }}</p>
 
     <p><strong>Assignée à :</strong>
-        @if ($task->assigned_to && $task->user)
-            {{ $task->user->name }} ({{ $task->user->email }})
+        @if ($task->assigned_to && $task->assignedUser)
+            {{ $task->assignedUser->name }} ({{ $task->assignedUser->email }})
         @else
             Non assignée
         @endif
