@@ -23,10 +23,11 @@
                         <div class="card-footer">
                             <a href="{{ route('projects.show', $project->id) }}" class="btn btn-sm btn-info">Voir les détails</a>
                             <a href="{{ route('projects.edit', $project->id) }}" class="btn btn-sm btn-warning">Modifier</a>
-                            <form action="{{ route('projects.destroy', $project->id) }}" method="POST" style="display:inline;">
+                            <a href="{{ route('tasks.index', ['project' => $project->id]) }}" class="btn btn-primary">Gérer les tâches</a>
+                            <form action="{{ route('projects.destroy', $project->id) }}" method="POST" style="display:inline;" id="delete-form-{{ $project->id }}">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="confirmDelete(event, {{ $project->id }})">Supprimer</button>
                             </form>
                         </div>
                     </div>
@@ -37,4 +38,15 @@
         <p>Vous n'avez aucun projet pour le moment.</p>
     @endif
 </div>
+
+<script>
+    function confirmDelete(event, projectId) {
+        event.preventDefault(); // Empêche l'envoi immédiat du formulaire
+        const confirmation = confirm("Êtes-vous sûr de vouloir supprimer ce projet ?");
+        
+        if (confirmation) {
+            document.getElementById('delete-form-' + projectId).submit(); // Soumet le formulaire après confirmation
+        }
+    }
+</script>
 @endsection
