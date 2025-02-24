@@ -19,8 +19,8 @@ Cette application permet aux utilisateurs d'organiser des projets en équipe, d'
 ## Installation
 1. Clonez le dépôt :
    ```bash
-   git clone https://github.com/votre-utilisateur/gestion-projets-collaboratifs.git
-   cd gestion-projets-collaboratifs
+   git clone https://github.com/votre-utilisateur/gestion-projets.git
+   cd gestion-projets
 
 2. Installez les dépendances PHP :
 composer install
